@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Real-Time Data Display</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var socket = io();  // Connect to the WebSocket server
+
+            socket.on('updateButtonData', function (data) {
+                console.log('Button data received: ' + data);
+                document.getElementById('buttonDataDisplay').textContent = data;
+            });
+
+            socket.on('updateSwitchData', function (data) {
+                console.log('Switch data received: ' + data);
+                document.getElementById('switchDataDisplay').textContent = data;
+            });
+
+            socket.on('updateKnobData', function (data) {
+                console.log('Knob data received: ' + data);
+                document.getElementById('knobDataDisplay').textContent = data;
+            });
+        });
+    </script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            text-align: center;
+            padding: 50px;
+        }
+        #buttonDataDisplay, #switchDataDisplay, #knobDataDisplay {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px auto;
+            width: 300px;
+            height: 50px;
+            line-height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Data from Y-Badge</h1>
+    <div id="buttonDataDisplay">Waiting for button data...</div>
+    <div id="switchDataDisplay">Waiting for switch data...</div>
+    <div id="knobDataDisplay">Waiting for knob data...</div>
+</body>
+</html>
