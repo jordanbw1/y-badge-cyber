@@ -47,7 +47,7 @@ void cyber_color_init() {
     pinMode(SWITCH2_PIN,INPUT);
     leds_init();
     timer_init();
-    all_leds_set_color(255, 0, 0);
+    all_leds_set_color(255, 255, 255);
 }
 
 void getCredentials() {
@@ -82,6 +82,7 @@ void pollForCommands() {
             int g = doc["g"].as<int>();
             int b = doc["b"].as<int>();
             // Implement your LED color change logic here
+            all_leds_set_color(r, g, b);
         }
     }
     http.end();
