@@ -119,7 +119,6 @@ def poll_commands():
     
     # Get the command from the DB
     command_data_json = redis_client.get(f"device_command:{device_ip}")
-    print("command_data_json", command_data_json)
     if command_data_json:
         command_data = json.loads(command_data_json)
         commands = {'command': command_data["command"], 'r': command_data["params"]["r"], 'g': command_data["params"]["g"], 'b': command_data["params"]["b"]}
