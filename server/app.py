@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, render_template, url_for
 from dotenv import load_dotenv
 import os
 import datetime
+import hashlib
 import re
 import redis
 import json
@@ -33,7 +34,22 @@ def control_device():
         password = request.form.get('password')
         color_hex = request.form.get('color')
 
-        # TODO: Ensure password matches hash in database
+        # Ensure password matches hash in database
+        redis_key = f"device:{device_ip}"
+        device_data = redis_client.get(redis_key)
+        if not device_data:
+            return jsonify({'error': 'Device not found'}), 400
+        
+        device_data = json.loads(device_data)
+        hashed_password = device_data.get('password')
+        if not hashed_password:
+            return jsonify({'error': 'Device not found'}), 400
+        
+        # Compare the password with the hash in the database
+        hashed_input_password = hashlib.md5(password.encode()).hexdigest()
+        if hashed_input_password != hashed_password:
+            return jsonify({'error': 'Invalid password'}), 400
+
 
         # Ensure ip address is in IP format with regex
         ip_regex = re.compile(r'^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$')
@@ -124,6 +140,11 @@ def confirm_command():
     redis_client.delete(f"device_command:{device_ip}")
 
     return jsonify({'status': 'success'})
+
+@app.route('/admin', methods=['GET'])
+def admin():
+    # TODO: Implement vulnerable admin route
+    pass
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
