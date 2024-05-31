@@ -125,6 +125,8 @@ def poll_commands():
         commands = {'command': command_data["command"], 'r': command_data["params"]["r"], 'g': command_data["params"]["g"], 'b': command_data["params"]["b"]}
         return jsonify(commands)
     
+    # TODO: Leave easter egg for playing rickroll or something. It would be a new command like 'rickroll'
+    
     # Return None if no command is found
     return jsonify({'command': None})
 
