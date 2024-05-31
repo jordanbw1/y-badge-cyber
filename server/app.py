@@ -6,10 +6,10 @@ import hashlib
 import re
 import redis
 import json
-from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active
+from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active, check_last_seen
 from helper_functions.time_helper import get_current_utc_time, convert_string_time_to_datetime
 
-DEVICE_TIMEOUT_SECONDS = 300 # Time in seconds before a device is considered offline
+DEVICE_TIMEOUT_SECONDS = 5 # Time in seconds before a device is considered offline
 
 load_dotenv(".env")
 
@@ -162,16 +162,23 @@ def admin_login():
     if request.method == 'POST':
         # Get the form data
         ip_address = request.form.get('identifier')
-        # Confirm that the IP address is in the database
+        # Confirm that the IP address is in the database and that it is active
         redis_key = f"device:{ip_address}"
         device_data = redis_client.get(redis_key)
         if not device_data:
-            return jsonify({'error': 'Device not found'}), 400
+            flash("Device not found")
+            return render_template('admin_login.html')
         
+        # Confirm device is active
+        status, message = check_last_seen(ip_address, DEVICE_TIMEOUT_SECONDS, redis_client)
+        if not status:
+            flash("Error occured: " + message)
+            return render_template('admin_login.html')
+
         # Get the device data
         device_data = json.loads(device_data)
         session['admin'] = True
-        session['device_ip'] = device_data["device_ip"]
+        session['device_ip'] = ip_address
         
         return redirect(url_for('admin'))
 
@@ -179,7 +186,7 @@ def admin_login():
 def admin_logout():
     # Clear the session
     session.clear()
-    return render_template('admin_login.html')
+    return redirect(url_for('admin_login'))
 
 @app.route('/admin', methods=['GET'])
 def admin():
@@ -187,8 +194,24 @@ def admin():
     if 'admin' not in session or session['admin'] != True:
         flash("Hah! You though we were that dumb? No you have to sign in first!")
         return redirect(url_for('admin_login'))
-    # TODO: Implement vulnerable admin route
-    pass
+    
+    # Query database for password for the device
+    device_ip = session['device_ip']
+    redis_key = f"device:{device_ip}"
+    device_data = redis_client.get(redis_key)
+    if not device_data:
+        flash("Device not found")
+        return redirect(url_for('index'))
+    
+    # Get the device data
+    device_data = json.loads(device_data)
+    password = device_data.get('password')
+    if not password:
+        flash("Device not found")
+        return redirect(url_for('index'))
+    
+    # Render page that shows the info they want.
+    return render_template('admin.html', device_ip=device_ip, password=password)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
