@@ -9,7 +9,7 @@ import json
 from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active, check_last_seen
 from helper_functions.time_helper import get_current_utc_time, convert_string_time_to_datetime
 
-DEVICE_TIMEOUT_SECONDS = 5 # Time in seconds before a device is considered offline
+DEVICE_TIMEOUT_SECONDS = 300 # Time in seconds before a device is considered offline
 
 load_dotenv(".env")
 
