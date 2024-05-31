@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template, url_for
+from flask import Flask, jsonify, request, render_template, url_for, session, redirect, flash
 from dotenv import load_dotenv
 import os
 import datetime
@@ -155,8 +155,38 @@ def list_view():
             })
     return jsonify({'endpoints': endpoints})
 
+@app.route('/admin_login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'GET':
+        return render_template('admin_login.html')
+    if request.method == 'POST':
+        # Get the form data
+        ip_address = request.form.get('identifier')
+        # Confirm that the IP address is in the database
+        redis_key = f"device:{ip_address}"
+        device_data = redis_client.get(redis_key)
+        if not device_data:
+            return jsonify({'error': 'Device not found'}), 400
+        
+        # Get the device data
+        device_data = json.loads(device_data)
+        session['admin'] = True
+        session['device_ip'] = device_data["device_ip"]
+        
+        return redirect(url_for('admin'))
+
+@app.route('/admin_logout', methods=['GET'])
+def admin_logout():
+    # Clear the session
+    session.clear()
+    return render_template('admin_login.html')
+
 @app.route('/admin', methods=['GET'])
 def admin():
+    # Check if the user is an admin
+    if 'admin' not in session or session['admin'] != True:
+        flash("Hah! You though we were that dumb? No you have to sign in first!")
+        return redirect(url_for('admin_login'))
     # TODO: Implement vulnerable admin route
     pass
 
