@@ -1,18 +1,21 @@
 from flask import Flask, jsonify, request, render_template, url_for
 from dotenv import load_dotenv
 import os
-import hashlib
 import datetime
-from helper_functions.database import execute_sql, execute_sql_return_id, sql_results_one
+import redis
+import json
 from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active
-from helper_functions.time_helper import get_current_utc_time
+from helper_functions.time_helper import get_current_utc_time, convert_string_time_to_datetime
 
-DEVICE_TIMEOUT_SECONDS = 300 # Time in seconds before a device is considered offline
+DEVICE_TIMEOUT_SECONDS = 5 # Time in seconds before a device is considered offline
 
 load_dotenv(".env")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
+# Initialize Redis client
+redis_pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(connection_pool=redis_pool)
 
 
 global current_command, current_params
@@ -57,30 +60,32 @@ def control_device():
 def get_credentials():
     # Check if the IP address is in the DB
     device_ip = request.remote_addr
-    query = "SELECT last_seen FROM devices WHERE ip_address = %s"
-    values = (device_ip,)
-    status, message, results = sql_results_one(query, values)
-    # If the device hasn't checked in, insert it into the DB
-    if not status or not results:
-        return insert_device_database(device_ip)
+    redis_key = f"device:{device_ip}"
+ 
+    device_data = redis_client.get(redis_key)
     
-    # Get values from query
-    last_seen = results[0]
-    # Get times in datetime format
+    if not device_data:
+        # Insert device into Redis
+        return insert_device_database(device_ip, redis_client)
+    
+    device_data = json.loads(device_data)
+    last_seen = device_data.get('last_seen')
+    if not last_seen:
+        return insert_device_database(device_ip, redis_client)
+    
     time_now = get_current_utc_time()
-    # If the device has not been seen specified time, remove device and generate new password
+    last_seen = convert_string_time_to_datetime(str(last_seen))
+    
     if (time_now - last_seen).total_seconds() > DEVICE_TIMEOUT_SECONDS:
-        # Remove device from database
-        status, message = remove_device_database(device_ip)
+        # Remove device from Redis
+        status, message = remove_device_database(device_ip, redis_client)
         if not status:
             return jsonify({'error': message}), 400
-        # Create new device entry
-        return insert_device_database(device_ip)
+        # Insert new device into Redis
+        return insert_device_database(device_ip, redis_client)
     
-    # Device has been seen in the specified time interval, return the identifier and update last seen time.
-    update_last_seen(device_ip)
-
-    # Return device identifier
+    # Update the last seen time
+    update_last_seen(device_ip, redis_client)
     return jsonify({'identifier': device_ip}), 200
 
 @app.route('/poll_commands', methods=['GET'])
@@ -88,15 +93,15 @@ def poll_commands():
     # Get IP address of the device
     device_ip = request.remote_addr
     # Ensure that device is in the DB and update last seen time
-    status, message = ensure_device_active(device_ip, DEVICE_TIMEOUT_SECONDS)
+    status, message = ensure_device_active(device_ip, DEVICE_TIMEOUT_SECONDS, redis_client)
     if not status:
         return jsonify({'error': message}), 400
     # TODO: Get the command from the DB
-    global current_command, current_params
-    if current_command == 'change_led_color':
-        commands = {'command': current_command, 'r': current_params["r"], 'g': current_params["g"], 'b': current_params["b"]}
-        # TODO: Update last check in time with device in DB
-        return jsonify(commands)
+    # global current_command, current_params
+    # if current_command == 'change_led_color':
+    #     commands = {'command': current_command, 'r': current_params["r"], 'g': current_params["g"], 'b': current_params["b"]}
+    #     # TODO: Update last check in time with device in DB
+    #     return jsonify(commands)
     return jsonify({'command': None})
 
 @app.route('/confirm_command', methods=['GET'])

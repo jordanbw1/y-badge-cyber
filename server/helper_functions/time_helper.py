@@ -14,3 +14,9 @@ def get_current_utc_time_string():
     formatted_utc_time = current_utc_time.strftime('%Y-%m-%d %H:%M:%S')
     
     return formatted_utc_time
+
+def convert_string_time_to_datetime(time_string):
+    # Convert the string to a datetime object
+    time_object = datetime.strptime(str(time_string), '%Y-%m-%d %H:%M:%S')
+    
+    return time_object

@@ -1,11 +1,11 @@
 import hashlib
 import random
 from flask import jsonify
-from helper_functions.database import execute_sql, sql_results_one
-from helper_functions.time_helper import get_current_utc_time, get_current_utc_time_string
+from helper_functions.time_helper import get_current_utc_time, get_current_utc_time_string, convert_string_time_to_datetime
 import os
+import json
 
-def insert_device_database(device_ip):
+def insert_device_database(device_ip, redis_client):
     """
     Insert a new device into the database.
     Parameters:
@@ -14,21 +14,20 @@ def insert_device_database(device_ip):
     - status: True if the operation was successful, False otherwise.
     - message: A message indicating the result of the operation.
     """
-    # Generate random insecure md5 password
-    password = generate_md5_password()
-    # Get the current time in UTC
-    last_seen = get_current_utc_time_string()
-    # Insert device and password into the DB
-    query = "INSERT INTO devices (ip_address, password, last_seen) VALUES (%s, %s, %s)"
-    values = (device_ip, password, last_seen)
-    status, message = execute_sql(query, values)
-    # If there was an error, return the error message
-    if not status:
-        return jsonify({'error': message}), 400
-    # Return success message with device identifier
-    return jsonify({'identifier': device_ip}), 200
+    try:
+        # Generate random insecure md5 password
+        password = generate_md5_password()
+        # Get the current time in UTC
+        last_seen = get_current_utc_time_string()
+        # Insert device and password into Redis
+        device_data = {'password': password, 'last_seen': last_seen}
+        redis_key = f"device:{device_ip}"
+        redis_client.set(redis_key, json.dumps(device_data))
+        return jsonify({'identifier': device_ip}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-def remove_device_database(device_ip):
+def remove_device_database(device_ip, redis_client):
     """
     Remove a device from the database.
     Parameters:
@@ -37,14 +36,17 @@ def remove_device_database(device_ip):
     - status: True if the operation was successful, False otherwise.
     - message: A message indicating the result of the operation.
     """
-    query = "DELETE FROM devices WHERE ip_address = %s"
-    values = (device_ip,)
-    status, message = execute_sql(query, values)
-    if not status:
-        return status, message
-    return status, "Good"
+    try:
+        redis_key = f"device:{device_ip}"
+        if redis_client.exists(redis_key):
+            redis_client.delete(redis_key)
+            return True, "Good"
+        else:
+            return False, "Device not found"
+    except Exception as e:
+        return False, str(e)
 
-def update_last_seen(device_ip):
+def update_last_seen(device_ip, redis_client):
     """
     Update the last seen time for a device in the database.
     Parameters:
@@ -53,13 +55,18 @@ def update_last_seen(device_ip):
     - status: True if the operation was successful, False otherwise.
     - message: A message indicating the result of the operation.
     """
-    time_now = get_current_utc_time_string()
-    query = "UPDATE devices SET last_seen = %s WHERE ip_address = %s"
-    values = (time_now, device_ip)
-    status, message = execute_sql(query, values)
-    if not status:
-        return status, message
-    return status, "Good"
+    try:
+        time_now = get_current_utc_time_string()
+        redis_key = f"device:{device_ip}"
+        if redis_client.exists(redis_key):
+            device_data = json.loads(redis_client.get(redis_key))
+            device_data['last_seen'] = time_now
+            redis_client.set(redis_key, json.dumps(device_data))
+            return True, "Good"
+        else:
+            return False, "Device not found"
+    except Exception as e:
+        return False, str(e)
 
 def generate_md5_password():
     static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'static')
@@ -73,7 +80,7 @@ def generate_md5_password():
     hashed_password = hashlib.md5(random_password.encode()).hexdigest()
     return hashed_password
 
-def check_last_seen(device_ip, device_timeout_seconds):
+def check_last_seen(device_ip, device_timeout_seconds, redis_client):
     """
     Check if the last seen time for a device in the database is within specified interval.
     Parameters:
@@ -82,18 +89,24 @@ def check_last_seen(device_ip, device_timeout_seconds):
     - status: True if the operation was successful, False otherwise.
     - message: A message indicating the result of the operation.
     """
-    query = "SELECT last_seen FROM devices WHERE ip_address = %s"
-    values = (device_ip,)
-    status, message, results = sql_results_one(query, values)
-    if not status or not results:
-        return False, "Device not found"
-    last_seen = results[0]
-    time_now = get_current_utc_time()
-    if (time_now - last_seen).total_seconds() > device_timeout_seconds:
-        return False, "Device has not been seen in the specified time interval"
-    return True, "Device has been seen in the specified time interval"
+    try:
+        redis_key = f"device:{device_ip}"
+        if not redis_client.exists(redis_key):
+            return False, "Device not found"
+        device_data = json.loads(redis_client.get(redis_key))
+        last_seen = device_data.get('last_seen')
+        if not last_seen:
+            return False, "Last seen time not found for device"
+        time_now = get_current_utc_time()
+        last_seen = convert_string_time_to_datetime(str(last_seen))
+        if (time_now - last_seen).total_seconds() > device_timeout_seconds:
+            return False, "Device has not been seen in the specified time interval"
+        else:
+            return True, "Device has been seen in the specified time interval"
+    except Exception as e:
+        return False, str(e)
 
-def ensure_device_active(device_ip, device_timeout_seconds):
+def ensure_device_active(device_ip, device_timeout_seconds, redis_client):
     """
     Check if a device is active, and update the last seen time if it is.
     Parameters:
@@ -103,19 +116,19 @@ def ensure_device_active(device_ip, device_timeout_seconds):
     - message: A message indicating the result of the operation.
     """
     # Check the last seen time for the device
-    status, message = check_last_seen(device_ip, device_timeout_seconds)
+    status, message = check_last_seen(device_ip, device_timeout_seconds, redis_client)
 
     # If device hasn't been seen, remove device from DB and insert new device
     if not status:
         # Remove device from DB
-        status, message = remove_device_database(device_ip)
+        status, message = remove_device_database(device_ip, redis_client)
         if not status:
             return False, message
         # Insert device into DB
-        return insert_device_database(device_ip)
+        return insert_device_database(device_ip, redis_client)
     
     # Report that device is still active, and update last seen time
-    status, message = update_last_seen(device_ip)
+    status, message = update_last_seen(device_ip, redis_client)
     if not status:
         return False, message
     return True, "Device is active"
