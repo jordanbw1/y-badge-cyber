@@ -12,10 +12,9 @@
 
 
 void setup() {
-    cyber_wifi_init();
+    cyber_init();
 }
 
 void loop() {
-    pollForCommands();
-    delay(1000); // Adjust polling interval as needed
+    cyber_loop();
 }

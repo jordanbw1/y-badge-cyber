@@ -7,6 +7,17 @@ const String serverUrl = "http://{{YOUR_SERVER_URL_HERE}}/";
 String app_identifier = "";
 String app_password = "";
 
+void cyber_init() {
+    cyber_wifi_init(); // Connect to WiFi
+    cyber_credentials_init(); // Get identifier and password from the server
+    cyber_color_init(); // Start up the LEDs
+}
+
+void cyber_loop() {
+    pollForCommands(); // Poll for commands from the server
+    delay(1000); // Delay for 1 second
+}
+
 void cyber_wifi_init() {
     // Connect to WiFi
     WiFi.begin(ssid, password);
@@ -15,16 +26,28 @@ void cyber_wifi_init() {
         Serial.println("Connecting to WiFi..");
     }
     Serial.println("Connected to the WiFi network");
+}
 
+void cyber_credentials_init() {
     // Get identifier and password from the server
     while (app_identifier == "" || app_password == "") {
         delay(500);
         getCredentials();
     }
+    Serial.println("App identifier: " + app_identifier);
+    Serial.println("App password: " + app_password);
 }
 
 void cyber_color_init() {
     // Implement your LED color initialization logic here
+    Serial.begin(115200);
+    pinMode(BUTTON1_PIN,INPUT);
+    pinMode(BUTTON2_PIN,INPUT);
+    pinMode(SWITCH1_PIN,INPUT);
+    pinMode(SWITCH2_PIN,INPUT);
+    leds_init();
+    timer_init();
+    all_leds_set_color(255, 0, 0);
 }
 
 void getCredentials() {
