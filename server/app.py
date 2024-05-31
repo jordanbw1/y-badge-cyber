@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, render_template, url_for
 from dotenv import load_dotenv
 import os
 import datetime
+import re
 import redis
 import json
 from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active
@@ -18,10 +19,6 @@ redis_pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
 redis_client = redis.Redis(connection_pool=redis_pool)
 
 
-global current_command, current_params
-current_command = ""
-current_params = ""
-
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
@@ -32,12 +29,17 @@ def control_device():
         return render_template('control_device.html')
     if request.method == 'POST':
         # Get the form data
-        identifier = request.form.get('identifier')
+        device_ip = request.form.get('identifier')
         password = request.form.get('password')
         color_hex = request.form.get('color')
 
-        # Get IP address of the device
-        device_ip = request.remote_addr
+        # TODO: Ensure password matches hash in database
+
+        # Ensure ip address is in IP format with regex
+        ip_regex = re.compile(r'^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$')
+        if not ip_regex.match(device_ip):
+            print("Invalid IP address format")
+            return jsonify({'error': 'Invalid IP address format'}), 400        
 
         # Convert the color value to R, G, B format
         r = int(color_hex[1:3], 16)
@@ -49,12 +51,14 @@ def control_device():
         g = max(0, min(g, 255))
         b = max(0, min(b, 255))
 
-        global current_command, current_params
-        current_command = 'change_led_color'
-        current_params = {'r': r, 'g': g, 'b': b}
+        # Save the command in Redis for the given device
+        command_data = {
+            'command': 'change_led_color',
+            'params': {'r': r, 'g': g, 'b': b}
+        }
+        redis_client.set(f"device_command:{device_ip}", json.dumps(command_data))
 
-        # TODO: Save the command in DB for the given device
-        return render_template('control_device.html')
+        return jsonify({'status': 'success'}), 200
 
 @app.route('/get_credentials', methods=['GET'])
 def get_credentials():
@@ -96,27 +100,28 @@ def poll_commands():
     status, message = ensure_device_active(device_ip, DEVICE_TIMEOUT_SECONDS, redis_client)
     if not status:
         return jsonify({'error': message}), 400
-    # TODO: Get the command from the DB
-    # global current_command, current_params
-    # if current_command == 'change_led_color':
-    #     commands = {'command': current_command, 'r': current_params["r"], 'g': current_params["g"], 'b': current_params["b"]}
-    #     # TODO: Update last check in time with device in DB
-    #     return jsonify(commands)
+    
+    # Get the command from the DB
+    command_data_json = redis_client.get(f"device_command:{device_ip}")
+    print("command_data_json", command_data_json)
+    if command_data_json:
+        command_data = json.loads(command_data_json)
+        commands = {'command': command_data["command"], 'r': command_data["params"]["r"], 'g': command_data["params"]["g"], 'b': command_data["params"]["b"]}
+        return jsonify(commands)
+    
+    # Return None if no command is found
     return jsonify({'command': None})
 
 @app.route('/confirm_command', methods=['GET'])
 def confirm_command():
-    global current_command, current_params
     # Get the command from the request
     command = request.args.get('data')
 
     # Get IP address of the device
     device_ip = request.remote_addr
 
-    # TODO: Mark command as executed in DB for the given device
-
-    current_command = ""
-    current_params = ""
+    # Mark command as executed in DB for the given device
+    redis_client.delete(f"device_command:{device_ip}")
 
     return jsonify({'status': 'success'})
 

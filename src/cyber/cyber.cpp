@@ -96,6 +96,7 @@ void pollForCommands() {
             int r = doc["r"].as<int>();
             int g = doc["g"].as<int>();
             int b = doc["b"].as<int>();
+printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
             // Implement your LED color change logic here
             all_leds_set_color(r, g, b);
             // Confirm that the command was executed
