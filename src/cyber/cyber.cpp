@@ -39,7 +39,6 @@ void cyber_credentials_init() {
 }
 
 void cyber_color_init() {
-    // Implement your LED color initialization logic here
     Serial.begin(115200);
     pinMode(BUTTON1_PIN,INPUT);
     pinMode(BUTTON2_PIN,INPUT);
@@ -83,7 +82,19 @@ void pollForCommands() {
             int b = doc["b"].as<int>();
             // Implement your LED color change logic here
             all_leds_set_color(r, g, b);
+            // Confirm that the command was executed
+            confirmCommandExecuted(command);
         }
     }
+    http.end();
+}
+
+// Tell the server that the command was executed
+void confirmCommandExecuted(String command) {
+    HTTPClient http;
+    String fullUrl = serverUrl + "/confirm_command";
+    fullUrl += "?command=" + command;
+    http.begin(fullUrl);
+    int httpResponseCode = http.GET();
     http.end();
 }
