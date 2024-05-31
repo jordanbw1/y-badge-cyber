@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Issue Commands</title>
+    <style>
+        .error-message {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <h1>Issue Commands</h1>
@@ -21,14 +27,19 @@
         </div>
         <button type="submit">Send Command</button>
     </form>
+    <div id="errorContainer" class="error-message"></div>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             var form = document.getElementById('commandForm');
             var submitBtn = document.getElementById('submitBtn');
+            var errorContainer = document.getElementById('errorContainer');
 
             form.addEventListener('submit', function (event) {
                 event.preventDefault(); // Prevent default form submission
+
+                // Clear previous error messages
+                errorContainer.textContent = '';
 
                 // Get form data
                 var formData = new FormData(form);
@@ -44,12 +55,15 @@
                     } else {
                         // Handle error, if needed
                         console.log("Error occurred while submitting command");
+                        // Handle error, display the error message
+                        var response = JSON.parse(xhr.responseText);
+                        errorContainer.textContent = response.error || 'An error occurred while submitting the command';
                     }
                 };
 
                 // Define what happens in case of error
                 xhr.onerror = function () {
-                    console.log("Error occurred while submitting command");
+                    errorContainer.textContent = 'An error occurred while submitting the command';
                 };
 
                 // Open connection
