@@ -3,10 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <title>Cyber Lab</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>Cyber Lab</h1>
-    <p>Welcome to the Cyber Lab! This is a simple web application that allows you to send commands to your Y-Badge.</p>
-    <p>Click <a href="{{url_for('control_device')}}">here</a> to send a command to your Y-Badge.</p>
+    <!-- Include Navbar -->
+    {% include "macros/navbar.html" ignore missing with context %}
+
+    <div class="container mt-5 max-width-container">
+        <h1 class="mb-4">Cyber Lab</h1>
+        <p>Welcome to the Cyber Lab! This is a simple web application that allows you to send commands to your Y-Badge.</p>
+        <p>Click <a href="{{url_for('control_device')}}">here</a> to send a command to your Y-Badge.</p>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

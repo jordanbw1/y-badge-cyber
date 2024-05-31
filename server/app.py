@@ -142,6 +142,19 @@ def confirm_command():
 
     return jsonify({'status': 'success'})
 
+@app.route('/list_view', methods=['GET'])
+def list_view():
+    # Collect all endpoints
+    endpoints = []
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint != 'static':  # Exclude static files
+            endpoints.append({
+                'endpoint': rule.endpoint,
+                'methods': ','.join(rule.methods),
+                'path': str(rule)
+            })
+    return jsonify({'endpoints': endpoints})
+
 @app.route('/admin', methods=['GET'])
 def admin():
     # TODO: Implement vulnerable admin route

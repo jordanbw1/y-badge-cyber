@@ -7,6 +7,9 @@
     <link href="{{url_for('static', filename='css/control_device.css')}}" rel="stylesheet">
 </head>
 <body>
+    <!-- Include Navbar -->
+    {% include "macros/navbar.html" ignore missing with context %}
+    
     <div class="container mt-5 max-width-container">
         <h1 class="mb-4">Issue Commands</h1>
         <form id="commandForm" method="post">
