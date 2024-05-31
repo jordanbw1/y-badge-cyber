@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const socket = io();
+
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                // Send authentication data
+                socket.emit('authenticate', { identifier: 'device123', password: 'securepassword' });
+            });
+
+            socket.on('authenticated', (data) => {
+                if (data.status === 'success') {
+                    console.log('Authenticated successfully');
+                } else {
+                    console.log('Authentication failed');
+                }
+            });
+
+            socket.on('response', (data) => {
+                console.log('Server response:', data);
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+            });
+
+            // Example of sending a command to the server
+            function sendCommand() {
+                socket.emit('command', { command: 'change_led_color', r: 255, g: 0, b: 0 });
+            }
+
+            document.getElementById('sendCommand').addEventListener('click', sendCommand);
+        });
+    </script>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <button id="sendCommand">Send Command</button>
+</body>
+</html>
