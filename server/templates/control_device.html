@@ -9,11 +9,11 @@
     <form id="commandForm" method="post">
         <div>
             <label for="identifier">Identifier:</label>
-            <input type="text" id="identifier" name="identifier">
+            <input type="text" id="identifier" name="identifier" required>
         </div>
         <div>
             <label for="password">Password:</label>
-            <input type="password" id="password" name="password">
+            <input type="text" id="password" name="password" required>
         </div>
         <div>
             <label for="color">Color:</label>
@@ -21,5 +21,44 @@
         </div>
         <button type="submit">Send Command</button>
     </form>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var form = document.getElementById('commandForm');
+            var submitBtn = document.getElementById('submitBtn');
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault(); // Prevent default form submission
+
+                // Get form data
+                var formData = new FormData(form);
+
+                // Create XMLHttpRequest object
+                var xhr = new XMLHttpRequest();
+
+                // Define what happens on successful data submission
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        // Handle success, if needed
+                        console.log("Command submitted successfully");
+                    } else {
+                        // Handle error, if needed
+                        console.log("Error occurred while submitting command");
+                    }
+                };
+
+                // Define what happens in case of error
+                xhr.onerror = function () {
+                    console.log("Error occurred while submitting command");
+                };
+
+                // Open connection
+                xhr.open('POST', form.action);
+
+                // Send form data
+                xhr.send(formData);
+            });
+        });
+    </script>
 </body>
 </html>

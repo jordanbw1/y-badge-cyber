@@ -1,12 +1,19 @@
 from flask import Flask, jsonify, request, render_template, url_for
+from dotenv import load_dotenv
+import os
+import hashlib
+import datetime
+from helper_functions.database import execute_sql, execute_sql_return_id, sql_results_one
+from helper_functions.device import insert_device_database, remove_device_database, update_last_seen
+from helper_functions.time_helper import get_current_utc_time
+
+DEVICE_TIMEOUT_SECONDS = 300 # Time in seconds before a device is considered offline
+
+load_dotenv(".env")
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
 
-credentials = {
-    "identifier": "your_identifier",
-    "password": "your_password"
-}
 
 global current_command, current_params
 current_command = ""
@@ -48,7 +55,33 @@ def control_device():
 
 @app.route('/get_credentials', methods=['GET'])
 def get_credentials():
-    return jsonify(credentials)
+    # Check if the IP address is in the DB
+    device_ip = request.remote_addr
+    query = "SELECT last_seen FROM devices WHERE ip_address = %s"
+    values = (device_ip,)
+    status, message, results = sql_results_one(query, values)
+    # If the device hasn't checked in, insert it into the DB
+    if not status or not results:
+        return insert_device_database(device_ip)
+    
+    # Get values from query
+    last_seen = results[0]
+    # Get times in datetime format
+    time_now = get_current_utc_time()
+    # If the device has not been seen specified time, remove device and generate new password
+    if (time_now - last_seen).total_seconds() > DEVICE_TIMEOUT_SECONDS:
+        # Remove device from database
+        status, message = remove_device_database(device_ip)
+        if not status:
+            return jsonify({'error': message}), 400
+        # Create new device entry
+        return insert_device_database(device_ip)
+    
+    # Device has been seen in the specified time interval, return the identifier and update last seen time.
+    update_last_seen(device_ip)
+
+    # Return device identifier
+    return jsonify({'identifier': device_ip}), 200
 
 @app.route('/poll_commands', methods=['GET'])
 def poll_commands():

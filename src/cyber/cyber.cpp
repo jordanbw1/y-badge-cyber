@@ -3,13 +3,13 @@
 const String ssid = "";
 const String password =  "";
 const String serverUrl = "http://{{YOUR_SERVER_URL_HERE}}/";
+const int MAX_ATTEMPTS = 5;
 
 String app_identifier = "";
-String app_password = "";
 
 void cyber_init() {
     cyber_wifi_init(); // Connect to WiFi
-    cyber_credentials_init(); // Get identifier and password from the server
+    cyber_credentials_init(); // Get identifier from the server
     cyber_color_init(); // Start up the LEDs
 }
 
@@ -29,13 +29,12 @@ void cyber_wifi_init() {
 }
 
 void cyber_credentials_init() {
-    // Get identifier and password from the server
-    while (app_identifier == "" || app_password == "") {
+    // Get identifier from the server
+    while (app_identifier == "") {
         delay(500);
         getCredentials();
     }
     Serial.println("App identifier: " + app_identifier);
-    Serial.println("App password: " + app_password);
 }
 
 void cyber_color_init() {
@@ -53,13 +52,30 @@ void getCredentials() {
     printf("Getting credentials from the server\n");
     HTTPClient http;
     http.begin(serverUrl + "/get_credentials");
-    int httpResponseCode = http.GET();
-    if (httpResponseCode > 0) {
-        String payload = http.getString();
-        DynamicJsonDocument doc(1024);
-        deserializeJson(doc, payload);
-        app_identifier = String(doc["identifier"].as<const char*>());
-        app_password = String(doc["password"].as<const char*>());
+    int attempts = 0;
+    while (true) {
+        int httpResponseCode = http.GET();
+        if (httpResponseCode > 0) {
+            String payload = http.getString();
+            DynamicJsonDocument doc(1024);
+            deserializeJson(doc, payload);
+            if (doc.containsKey("identifier")) {
+                app_identifier = String(doc["identifier"].as<const char*>());
+                printf("App identifier: %s\n", app_identifier.c_str());
+                break; // Exit the loop if successful
+            } else {
+                printf("Error: Server response does not contain 'identifier'\n");
+                delay(5000); // Wait for 5 seconds before retrying
+            }
+        } else {
+            printf("Error: HTTP request failed with error code %d\n", httpResponseCode);
+            delay(5000); // Wait for 5 seconds before retrying
+        }
+        attempts++;
+        if (attempts >= MAX_ATTEMPTS) {
+            printf("Exceeded maximum number of attempts. Aborting.\n");
+            break;
+        }
     }
     http.end();
 }
