@@ -4,7 +4,7 @@ import os
 import hashlib
 import datetime
 from helper_functions.database import execute_sql, execute_sql_return_id, sql_results_one
-from helper_functions.device import insert_device_database, remove_device_database, update_last_seen
+from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active
 from helper_functions.time_helper import get_current_utc_time
 
 DEVICE_TIMEOUT_SECONDS = 300 # Time in seconds before a device is considered offline
@@ -85,6 +85,13 @@ def get_credentials():
 
 @app.route('/poll_commands', methods=['GET'])
 def poll_commands():
+    # Get IP address of the device
+    device_ip = request.remote_addr
+    # Ensure that device is in the DB and update last seen time
+    status, message = ensure_device_active(device_ip, DEVICE_TIMEOUT_SECONDS)
+    if not status:
+        return jsonify({'error': message}), 400
+    # TODO: Get the command from the DB
     global current_command, current_params
     if current_command == 'change_led_color':
         commands = {'command': current_command, 'r': current_params["r"], 'g': current_params["g"], 'b': current_params["b"]}

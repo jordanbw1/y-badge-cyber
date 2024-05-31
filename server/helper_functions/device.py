@@ -1,8 +1,8 @@
 import hashlib
 import random
 from flask import jsonify
-from helper_functions.database import execute_sql
-from helper_functions.time_helper import get_current_utc_time_string
+from helper_functions.database import execute_sql, sql_results_one
+from helper_functions.time_helper import get_current_utc_time, get_current_utc_time_string
 import os
 
 def insert_device_database(device_ip):
@@ -72,3 +72,50 @@ def generate_md5_password():
     # Hash the password using MD5
     hashed_password = hashlib.md5(random_password.encode()).hexdigest()
     return hashed_password
+
+def check_last_seen(device_ip, device_timeout_seconds):
+    """
+    Check if the last seen time for a device in the database is within specified interval.
+    Parameters:
+    - device_ip: The IP address of the device.
+    Returns:
+    - status: True if the operation was successful, False otherwise.
+    - message: A message indicating the result of the operation.
+    """
+    query = "SELECT last_seen FROM devices WHERE ip_address = %s"
+    values = (device_ip,)
+    status, message, results = sql_results_one(query, values)
+    if not status or not results:
+        return False, "Device not found"
+    last_seen = results[0]
+    time_now = get_current_utc_time()
+    if (time_now - last_seen).total_seconds() > device_timeout_seconds:
+        return False, "Device has not been seen in the specified time interval"
+    return True, "Device has been seen in the specified time interval"
+
+def ensure_device_active(device_ip, device_timeout_seconds):
+    """
+    Check if a device is active, and update the last seen time if it is.
+    Parameters:
+    - device_ip: The IP address of the device.
+    Returns:
+    - status: True if the device is active, False otherwise.
+    - message: A message indicating the result of the operation.
+    """
+    # Check the last seen time for the device
+    status, message = check_last_seen(device_ip, device_timeout_seconds)
+
+    # If device hasn't been seen, remove device from DB and insert new device
+    if not status:
+        # Remove device from DB
+        status, message = remove_device_database(device_ip)
+        if not status:
+            return False, message
+        # Insert device into DB
+        return insert_device_database(device_ip)
+    
+    # Report that device is still active, and update last seen time
+    status, message = update_last_seen(device_ip)
+    if not status:
+        return False, message
+    return True, "Device is active"
