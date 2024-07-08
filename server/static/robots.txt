@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /admin
+Disallow: /admin_login
+Disallow: /admin_logout
+
+
+Allow: /
+Allow: /about
+Allow: /control_device
+Allow: /list_view

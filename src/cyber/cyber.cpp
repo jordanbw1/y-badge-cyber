@@ -20,7 +20,7 @@ void cyber_loop() {
 
 void cyber_wifi_init() {
     // Connect to WiFi
-    WiFi.begin(ssid, password);
+    WiFi.begin(ssid);
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.println("Connecting to WiFi..");

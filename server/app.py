@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template, url_for, session, redirect, flash
+from flask import Flask, jsonify, request, render_template, url_for, session, redirect, flash, send_from_directory
 from dotenv import load_dotenv
 import os
 import datetime
@@ -212,6 +212,14 @@ def admin():
     
     # Render page that shows the info they want.
     return render_template('admin.html', device_ip=device_ip, password=password)
+
+@app.route('/about', methods=['GET'])
+def about():
+    return render_template('about.html')
+
+@app.route('/robots.txt', methods=['GET'])
+def robots():
+    return send_from_directory(app.static_folder, "robots.txt")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
