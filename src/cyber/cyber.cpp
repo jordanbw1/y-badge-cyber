@@ -102,6 +102,7 @@ void pollForCommands() {
         deserializeJson(doc, response);
         String command = doc["command"].as<String>();
         printf("Received command: %s\n", command.c_str());
+        // Check the command and respond accordingly
         if (command == "change_led_color") {
             int r = doc["r"].as<int>();
             int g = doc["g"].as<int>();
@@ -111,6 +112,17 @@ printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
             all_leds_set_color(r, g, b);
             // Confirm that the command was executed
             confirmCommandExecuted(command);
+        }
+        else if (command == "change_password") {
+            String new_password = doc["new_password"].as<String>();
+            printf("Changing password to %s\n", new_password.c_str());
+            // Implement your password change logic here
+            app_password = new_password;
+            // Confirm that the command was executed
+            confirmCommandExecuted(command);
+        }
+        else {
+            printf("Unknown command: %s\n", command.c_str());
         }
     }
     http.end();

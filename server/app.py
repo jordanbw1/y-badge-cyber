@@ -6,7 +6,7 @@ import hashlib
 import re
 import redis
 import json
-from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active, check_last_seen
+from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active, check_last_seen, update_password
 from helper_functions.time_helper import get_current_utc_time, convert_string_time_to_datetime
 
 DEVICE_TIMEOUT_SECONDS = 300 # Time in seconds before a device is considered offline
@@ -32,7 +32,7 @@ def control_device():
         # Get the form data
         device_ip = request.form.get('identifier')
         password = request.form.get('password')
-        color_hex = request.form.get('color')
+        control_type = request.form.get('control_type')
 
         # Ensure password matches hash in database
         redis_key = f"device:{device_ip}"
@@ -50,28 +50,45 @@ def control_device():
         if hashed_input_password != hashed_password:
             return jsonify({'error': 'Invalid password'}), 400
 
+        # Check control type and execute the command
+        if control_type == 'change_led_color':
+            color_hex = request.form.get('color')
+            # Ensure ip address is in IP format with regex
+            ip_regex = re.compile(r'^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$')
+            if not ip_regex.match(device_ip):
+                print("Invalid IP address format")
+                return jsonify({'error': 'Invalid IP address format'}), 400        
 
-        # Ensure ip address is in IP format with regex
-        ip_regex = re.compile(r'^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$')
-        if not ip_regex.match(device_ip):
-            print("Invalid IP address format")
-            return jsonify({'error': 'Invalid IP address format'}), 400        
+            # Convert the color value to R, G, B format
+            r = int(color_hex[1:3], 16)
+            g = int(color_hex[3:5], 16)
+            b = int(color_hex[5:7], 16)
 
-        # Convert the color value to R, G, B format
-        r = int(color_hex[1:3], 16)
-        g = int(color_hex[3:5], 16)
-        b = int(color_hex[5:7], 16)
+            # Ensure RGB values are within the range of 0 to 255
+            r = max(0, min(r, 255))
+            g = max(0, min(g, 255))
+            b = max(0, min(b, 255))
 
-        # Ensure RGB values are within the range of 0 to 255
-        r = max(0, min(r, 255))
-        g = max(0, min(g, 255))
-        b = max(0, min(b, 255))
-
-        # Save the command in Redis for the given device
-        command_data = {
-            'command': 'change_led_color',
-            'params': {'r': r, 'g': g, 'b': b}
-        }
+            # Save the command in Redis for the given device
+            command_data = {
+                'command': 'change_led_color',
+                'params': {'r': r, 'g': g, 'b': b}
+            }
+        elif control_type == 'change_password':
+            new_password = request.form.get('new_password')
+            # Hash the new password
+            status, message, hashed_new_password = update_password(device_ip, new_password, redis_client)
+            if not status:
+                return jsonify({'error': message}), 400
+            
+            # Save the command in Redis for the given device
+            command_data = {
+                'command': 'change_password',
+                'params': {'new_password': new_password}
+            }
+        else:
+            return jsonify({'error': 'Invalid control type'}), 400
+        
         redis_client.set(f"device_command:{device_ip}", json.dumps(command_data))
 
         return jsonify({'status': 'success'}), 200
@@ -126,15 +143,24 @@ def poll_commands():
     
     # Get the command from the DB
     command_data_json = redis_client.get(f"device_command:{device_ip}")
-    if command_data_json:
-        command_data = json.loads(command_data_json)
-        commands = {'command': command_data["command"], 'r': command_data["params"]["r"], 'g': command_data["params"]["g"], 'b': command_data["params"]["b"]}
-        return jsonify(commands)
-    
-    # TODO: Leave easter egg for playing rickroll or something. It would be a new command like 'rickroll'
-    
     # Return None if no command is found
-    return jsonify({'command': None})
+    if not command_data_json:
+        return jsonify({'command': None})
+    
+    command_data = json.loads(command_data_json)
+    commands = {'command': None} # Set default command to None
+    
+    if command_data["command"] == 'change_led_color':
+        commands = {'command': command_data["command"], 'r': command_data["params"]["r"], 'g': command_data["params"]["g"], 'b': command_data["params"]["b"]}
+    elif command_data["command"] == 'change_password':
+        commands = {'command': command_data["command"], 'new_password': command_data["params"]["new_password"]}
+    elif command_data["command"] == 'rickroll':
+        pass
+
+    # TODO: Leave easter egg for playing rickroll or something. It would be a new command like 'rickroll'
+
+    return jsonify(commands)
+    
 
 @app.route('/confirm_command', methods=['GET'])
 def confirm_command():

@@ -10,6 +10,7 @@ def insert_device_database(device_ip, redis_client):
     Insert a new device into the database.
     Parameters:
     - device_ip: The IP address of the device.
+    - redis_client: The Redis client object.
     Returns:
     - status: True if the operation was successful, False otherwise.
     - message: A message indicating the result of the operation.
@@ -32,6 +33,7 @@ def remove_device_database(device_ip, redis_client):
     Remove a device from the database.
     Parameters:
     - device_ip: The IP address of the device.
+    - redis_client: The Redis client object.
     Returns:
     - status: True if the operation was successful, False otherwise.
     - message: A message indicating the result of the operation.
@@ -51,6 +53,7 @@ def update_last_seen(device_ip, redis_client):
     Update the last seen time for a device in the database.
     Parameters:
     - device_ip: The IP address of the device.
+    - redis_client: The Redis client object.
     Returns:
     - status: True if the operation was successful, False otherwise.
     - message: A message indicating the result of the operation.
@@ -85,6 +88,8 @@ def check_last_seen(device_ip, device_timeout_seconds, redis_client):
     Check if the last seen time for a device in the database is within specified interval.
     Parameters:
     - device_ip: The IP address of the device.
+    - device_timeout_seconds: The time interval in seconds within which the device must be seen.
+    - redis_client: The Redis client object.
     Returns:
     - status: True if the operation was successful, False otherwise.
     - message: A message indicating the result of the operation.
@@ -111,6 +116,8 @@ def ensure_device_active(device_ip, device_timeout_seconds, redis_client):
     Check if a device is active, and update the last seen time if it is.
     Parameters:
     - device_ip: The IP address of the device.
+    - device_timeout_seconds: The time interval in seconds within which the device must be seen.
+    - redis_client: The Redis client object.
     Returns:
     - status: True if the device is active, False otherwise.
     - message: A message indicating the result of the operation.
@@ -132,3 +139,38 @@ def ensure_device_active(device_ip, device_timeout_seconds, redis_client):
     if not status:
         return False, message
     return True, "Device is active"
+
+def update_password(device_ip, new_password, redis_client):
+    """
+    Updates the password for a device in the database.
+    Parameters:
+    - device_ip: The IP address of the device.
+    - new_password: The new password for the device.
+    - redis_client: The Redis client object.
+    Returns:
+    - status: True if the operation was successful, False otherwise.
+    - message: A message indicating the result of the operation.
+    """
+    try:
+        redis_key = f"device:{device_ip}"
+        if not redis_client.exists(redis_key):
+            return False, "Device not found", None
+
+        # Load device data from Redis
+        device_data = json.loads(redis_client.get(redis_key))
+        
+        # Generate random insecure md5 password
+        hashed_password = hashlib.md5(new_password.encode()).hexdigest()
+
+        # Update device data values
+        device_data['last_seen'] = get_current_utc_time_string()
+        device_data['password'] = hashed_password
+        device_data['raw_password'] = new_password
+
+        # Set values in Redis
+        redis_client.set(redis_key, json.dumps(device_data))
+
+        return True, "Successfully updated password", hashed_password
+    
+    except Exception as e:
+        return False, "Error updating password: " + str(e), None
