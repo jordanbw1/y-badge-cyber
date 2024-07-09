@@ -106,7 +106,14 @@ def get_credentials():
     
     # Update the last seen time
     update_last_seen(device_ip, redis_client)
-    return jsonify({'identifier': device_ip}), 200
+
+    # Get the password from the database
+    device_data = redis_client.get(redis_key)
+    device_data = json.loads(device_data)
+    password = device_data.get('raw_password')
+    if not password:
+        return jsonify({'error': 'Device not found'}), 400
+    return jsonify({'identifier': device_ip, 'password': password}), 200
 
 @app.route('/poll_commands', methods=['GET'])
 def poll_commands():

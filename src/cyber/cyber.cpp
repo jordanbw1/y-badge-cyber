@@ -6,15 +6,21 @@ const String serverUrl = "http://{{YOUR_SERVER_URL_HERE}}/";
 const int MAX_ATTEMPTS = 5;
 
 String app_identifier = "";
+String app_password = "";
 
 void cyber_init() {
+    screen_init(); // Initialize the screen
+    display_text("Connecting Wifi...");
     cyber_wifi_init(); // Connect to WiFi
+    display_text("Getting Credentials...");
     cyber_credentials_init(); // Get identifier from the server
+    display_text("Starting LEDs...");
     cyber_color_init(); // Start up the LEDs
 }
 
 void cyber_loop() {
     pollForCommands(); // Poll for commands from the server
+    screen_loop(app_identifier, app_password, true); // Display the identifier and password
     delay(1000); // Delay for 1 second
 }
 
@@ -59,16 +65,20 @@ void getCredentials() {
             String payload = http.getString();
             DynamicJsonDocument doc(1024);
             deserializeJson(doc, payload);
-            if (doc.containsKey("identifier")) {
+            if (doc.containsKey("identifier") && doc.containsKey("password")) {
                 app_identifier = String(doc["identifier"].as<const char*>());
+                app_password = String(doc["password"].as<const char*>());
                 printf("App identifier: %s\n", app_identifier.c_str());
+                printf("App password: %s\n", app_password.c_str());
                 break; // Exit the loop if successful
             } else {
-                printf("Error: Server response does not contain 'identifier'\n");
+                printf("Error: Server response does not contain 'identifier' or 'password'\n");
+                display_text("Server Error 1 Getting Creds");
                 delay(5000); // Wait for 5 seconds before retrying
             }
         } else {
             printf("Error: HTTP request failed with error code %d\n", httpResponseCode);
+            display_text("Server Error 2 Getting Creds");
             delay(5000); // Wait for 5 seconds before retrying
         }
         attempts++;

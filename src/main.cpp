@@ -9,9 +9,11 @@
 #include "light_show/light_show.h"
 #include "wifi_test/wifi_test.h"
 #include "cyber/cyber.h"
+#include "yboard.h"
 
 
 void setup() {
+    Yboard.setup();  // Y-Board
     cyber_init();
 }
 

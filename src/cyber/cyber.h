@@ -5,6 +5,7 @@
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include "colors.h"
+#include "screen.h"
 
 void cyber_init();
 void cyber_loop();

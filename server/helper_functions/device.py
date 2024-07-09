@@ -16,11 +16,11 @@ def insert_device_database(device_ip, redis_client):
     """
     try:
         # Generate random insecure md5 password
-        password = generate_md5_password()
+        hashed_password, raw_password = generate_md5_password()
         # Get the current time in UTC
         last_seen = get_current_utc_time_string()
         # Insert device and password into Redis
-        device_data = {'password': password, 'last_seen': last_seen}
+        device_data = {'password': hashed_password, 'raw_password': raw_password, 'last_seen': last_seen}
         redis_key = f"device:{device_ip}"
         redis_client.set(redis_key, json.dumps(device_data))
         return jsonify({'identifier': device_ip}), 200
@@ -78,7 +78,7 @@ def generate_md5_password():
     random_password = random.choice(passwords).strip()
     # Hash the password using MD5
     hashed_password = hashlib.md5(random_password.encode()).hexdigest()
-    return hashed_password
+    return hashed_password, random_password
 
 def check_last_seen(device_ip, device_timeout_seconds, redis_client):
     """
