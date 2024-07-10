@@ -1,8 +1,7 @@
 #include "cyber.h"
 
-const String ssid = "";
-const String password =  "";
-const String serverUrl = "http://{{YOUR_SERVER_URL_HERE}}/";
+const String ssid = "BYU-WiFi";
+const String serverUrl = "http://ecen192.byu.edu/";
 const int MAX_ATTEMPTS = 5;
 
 String app_identifier = "";
@@ -107,7 +106,7 @@ void pollForCommands() {
             int r = doc["r"].as<int>();
             int g = doc["g"].as<int>();
             int b = doc["b"].as<int>();
-printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
+            printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
             // Implement your LED color change logic here
             all_leds_set_color(r, g, b);
             // Confirm that the command was executed
