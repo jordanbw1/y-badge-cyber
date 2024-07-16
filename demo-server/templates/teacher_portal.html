@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Teacher - Manage Grades</title>
+    <link href="{{url_for('static', filename='css/stylesheet.css')}}" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Include Navbar -->
+    {% include "macros/navbar.html" ignore missing with context %}
+
+    <!-- Get Flask messages -->
+    {% include "macros/flask_messages.html" ignore missing with context %}
+
+    <div class="container mt-5 max-width-container">
+        <h1 class="mb-4">Manage Grades</h1>
+        <h2>View Grades</h2>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Subject</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student, grades in grades.items() %}
+                    {% for subject, grade in grades.items() %}
+                    <tr>
+                        <td>{{ student }}</td>
+                        <td>{{ subject }}</td>
+                        <td>{{ grade }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <br>
+
+        <h2>Change Grades</h2>
+        <form method="post">
+            <label for="student">Student:</label>
+            <select id="student" name="student" required>
+                {% for student in grades.keys() %}
+                <option value="{{ student }}">{{ student }}</option>
+                {% endfor %}
+            </select><br><br>
+            
+            <label for="subject">Subject:</label>
+            <select id="subject" name="subject" required>
+                <option value="Math">Math</option>
+                <option value="Science">Science</option>
+            </select><br><br>
+            
+            <label for="grade">Grade:</label>
+            <input type="text" id="grade" name="grade" required pattern="^\d{1,3}$"><br><br>
+            
+            <button type="submit">Update Grade</button>
+        </form>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul>
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        
+        <br>
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

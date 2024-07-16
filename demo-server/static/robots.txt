@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /passwords
+Disallow: /teacher_portal
+
+Allow: /grades
+Allow: /login
+Allow: /logout
