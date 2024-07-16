@@ -5,3 +5,4 @@ Disallow: /teacher_portal
 Allow: /grades
 Allow: /login
 Allow: /logout
+Allow: /fun

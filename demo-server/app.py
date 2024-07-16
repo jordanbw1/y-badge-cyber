@@ -78,6 +78,11 @@ def list_view():
     return jsonify({'endpoints': endpoints})
 
 
+@app.route('/fun', methods=['GET'])
+def fun():
+    return render_template("fun.html")
+
+
 @app.route('/robots.txt', methods=['GET'])
 def robots():
     return send_from_directory(app.static_folder, "robots.txt")
