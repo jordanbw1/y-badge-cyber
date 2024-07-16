@@ -1,15 +1,18 @@
 from flask import Flask, jsonify, request, render_template, url_for, session, redirect, flash, send_from_directory
 from dotenv import load_dotenv
-import os
-import datetime
 import re
-import json
+import hashlib
+
+
+# Helper function to hash passwords using MD5
+def hash_password(password):
+    return hashlib.md5(password.encode()).hexdigest()
 
 
 USERS = {
-    'jimmy': 'cyberRocks!',
-    'katie': 'password',
-    'teacher': 'iloveteaching'
+    'jimmy': hash_password('cyberRocks!'),
+    'katie': hash_password('password'),
+    'teacher': hash_password('iloveteaching')
 }
 
 GRADES = {
@@ -46,7 +49,8 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username in USERS and USERS[username] == password:
+        hashed_password = hash_password(password)
+        if username in USERS and USERS[username] == hashed_password:
             session['username'] = username
             return redirect(url_for('index'))
         else:

@@ -2,3 +2,13 @@
     color: red;
     font-weight: bold;
 }
+
+/* Center table headers */
+.table th {
+    text-align: center;
+}
+
+/* Add larger margins in table cells */
+.table td, .table th {
+    padding: 15px;  /* Adjust the padding value as needed */
+}

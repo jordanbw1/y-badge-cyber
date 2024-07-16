@@ -1,30 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Demo Grades Website</title>
-    <link href="{{url_for('static', filename='css/stylesheet.css')}}" rel="stylesheet">
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <!-- Include Navbar -->
-    {% include "macros/navbar.html" ignore missing with context %}
+{% extends "base.html" %}
 
-    <!-- Get Flask messages -->
-    {% include "macros/flask_messages.html" ignore missing with context %}
+{% block title %}Student Grades Demo{% endblock %}
 
-    <div class="container mt-5 max-width-container">
-        <h1 class="mb-4">Demo Grades Website</h1>
-        <p>Welcome to the Grades Demo Website! This is a simple website to teach you some hacking skills. You are authorized hack this website.</p>
-        <p>You can sign in with username: <b>katie</b> password: <b>password</b></p>
-        <p>Next try poking around in the website. You want to sign in as the <b>teacher</b> user.</p>
-        <p>Perhaps you should look for <b>disallowed</b> pages in <a href="/robots.txt">robots.txt</a> ;)</p>
-        <p>If you find any suspicious pages, try navigating to them. For example, if I found the record: "<b>Disallow: /secret/fun</b>" I would put this url in my browser: <b>WEBSITE_URL/secret/fun</b></p>
-    </div>
-
-    <!-- Bootstrap JS and dependencies -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-</body>
-</html>
+{% block content %}
+    <h1 class="mb-4">Student Grades Demo</h1>
+    <p>Welcome to the Student Grades Demo website! This is a simple website to teach you some hacking skills. You are authorized hack this website.</p>
+    <p>You can sign in with username: <b>katie</b> password: <b>password</b></p>
+    <p>Next try poking around in the website. You want to find a way to sign in as the <b>teacher</b> user. Try to find the password to the teacher user somewhere.</p>
+    <p>Perhaps you should look for <b>disallowed</b> pages in <a href="/robots.txt">robots.txt</a> ;)</p>
+    <p>If you find any suspicious pages, try navigating to them. For example, if I found the record: "<b>Disallow: /secret/fun</b>" I would put this url in my browser: <b>{{request.base_url}}secret/fun</b></p>
+{% endblock %}
