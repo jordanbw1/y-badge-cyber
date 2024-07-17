@@ -8,6 +8,8 @@ import redis
 import json
 from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active, check_last_seen, update_password
 from helper_functions.time_helper import get_current_utc_time, convert_string_time_to_datetime
+from werkzeug.middleware.proxy_fix import ProxyFix # NOTE: Comment out for local testing
+
 
 DEVICE_TIMEOUT_SECONDS = 300 # Time in seconds before a device is considered offline
 
@@ -15,6 +17,8 @@ load_dotenv(".env")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1) # NOTE: Comment out for local testing
+
 # Initialize Redis client
 redis_pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
 redis_client = redis.Redis(connection_pool=redis_pool)
