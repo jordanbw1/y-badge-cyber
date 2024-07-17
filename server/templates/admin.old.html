@@ -15,26 +15,8 @@
 
     <div class="container mt-5 max-width-container">
         <h1 class="mb-4">Admin</h1>
-
-        <!-- Table to display IP address, password hash, and last hacked time -->
-        <table class="table table-bordered" style="margin-bottom: 20px;">
-            <thead>
-                <tr class="text-center">
-                    <th>IP Address</th>
-                    <th>Hashed Password</th>
-                    <th>Last Hacked Time</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for device in devices %}
-                <tr class="text-center">
-                    <td>{{ device.ip_address }}</td>
-                    <td>{{ device.password_hash }}</td>
-                    <td>{{ device.last_hacked_time }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <p>IP: {{ip_address}}</p>
+        <p>Password: {{password}}</p>
     </div>
 
     <!-- Bootstrap JS and dependencies -->

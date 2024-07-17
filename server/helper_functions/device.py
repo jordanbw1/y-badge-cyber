@@ -130,15 +130,16 @@ def ensure_device_active(device_ip, device_timeout_seconds, redis_client):
         # Remove device from DB
         status, message = remove_device_database(device_ip, redis_client)
         if not status:
-            return False, message
+            return False, message, None
         # Insert device into DB
-        return insert_device_database(device_ip, redis_client)
+        result = insert_device_database(device_ip, redis_client)
+        return True, "Successfully reinserted device", result
     
     # Report that device is still active, and update last seen time
     status, message = update_last_seen(device_ip, redis_client)
     if not status:
-        return False, message
-    return True, "Device is active"
+        return False, message, None
+    return True, "Device is active", None
 
 def update_password(device_ip, new_password, redis_client):
     """
