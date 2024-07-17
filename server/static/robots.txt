@@ -2,10 +2,10 @@ User-agent: *
 Disallow: /admin
 Disallow: /admin_login
 Disallow: /admin_logout
+Disallow: /control_device
+Disallow: /get_commands
 
 
 Allow: /
-Allow: /get_commands
-Allow: /control_device
 Allow: /about
 Allow: /list_view
