@@ -24,7 +24,7 @@ def insert_device_database(device_ip, redis_client):
         device_data = {'password': hashed_password, 'raw_password': raw_password, 'last_seen': last_seen}
         redis_key = f"device:{device_ip}"
         redis_client.set(redis_key, json.dumps(device_data))
-        return jsonify({'identifier': device_ip}), 200
+        return jsonify({'identifier': device_ip, 'password': raw_password}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
