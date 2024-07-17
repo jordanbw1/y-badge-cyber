@@ -11,8 +11,8 @@
 #include <Wire.h>
 
 void screen_init();
-void screen_loop(String app_identifier, String app_password, bool display_password=false);
-void display_info(String app_identifier, String app_password, bool display_password=false);
+void screen_loop(String ip_address, String app_password, bool display_password=false);
+void display_info(String ip_address, String app_password, bool display_password=false);
 void display_text(String text);
 void draw_text(String text, int x=0, int y=0);
 

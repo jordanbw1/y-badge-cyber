@@ -37,6 +37,26 @@ def get_commands():
     
     """
     commands = {
+        'endpoint': '/control_device',
+        'method': 'POST',
+        'parameters': [
+            {
+                'name': 'control_type',
+                'type': 'str',
+                'description': 'Type of control command to execute'
+            },
+            {
+                'name': 'ip_address',
+                'type': 'str',
+                'description': 'IP address of the device'
+            },
+            {
+                'name': 'password',
+                'type': 'str',
+                'description': 'Password of the device'
+            }
+        ],
+        'description': 'These are the commands that the device can execute. Execute commands by sending a POST request to /control_device with the appropriate parameters. The device IP address and password are required to authenticate the device. The control_type parameter specifies the type of command to execute. The parameters for each command are specified in the commands list.',
         'commands': [
             {
                 'command': 'change_led_color',
@@ -69,9 +89,18 @@ def get_commands():
                         'description': 'New password for the device'
                     }
                 ]
+            },
+            {
+                'command': 'display_password',
+                'description': 'Display the password of the device on the screen',
+                'parameters': 'None'
+            },
+            {
+                'command': 'hide_password',
+                'description': 'Hide thepassword of the device from the screen',
+                'parameters': 'None'
             }
-        ],
-        'description': 'These are the commands that the device can execute. Execute commands by sending a POST request to /control_device with the appropriate parameters.'
+        ]
     }
     return jsonify(commands)
 
@@ -81,7 +110,7 @@ def control_device():
         return render_template('control_device.html')
     if request.method == 'POST':
         # Get the form data
-        device_ip = request.form.get('identifier')
+        device_ip = request.form.get('ip_address')
         password = request.form.get('password')
         control_type = request.form.get('control_type')
 
@@ -137,6 +166,18 @@ def control_device():
                 'command': 'change_password',
                 'params': {'new_password': new_password}
             }
+        elif control_type == 'display_password':
+            # Save the command in Redis for the given device
+            command_data = {
+                'command': 'display_password',
+                'params': {}
+            }
+        elif control_type == 'hide_password':
+            # Save the command in Redis for the given device
+            command_data = {
+                'command': 'hide_password',
+                'params': {}
+            }
         else:
             return jsonify({'error': 'Invalid control type'}), 400
         
@@ -181,7 +222,7 @@ def get_credentials():
     password = device_data.get('raw_password')
     if not password:
         return jsonify({'error': 'Device not found'}), 400
-    return jsonify({'identifier': device_ip, 'password': password}), 200
+    return jsonify({'ip_address': device_ip, 'password': password}), 200
 
 @app.route('/poll_commands', methods=['GET'])
 def poll_commands():
@@ -207,6 +248,12 @@ def poll_commands():
         commands = {'command': command_data["command"], 'new_password': command_data["params"]["new_password"]}
     elif command_data["command"] == 'rickroll':
         pass
+    elif command_data["command"] == 'display_password':
+        commands = {'command': command_data["command"]}
+    elif command_data["command"] == 'hide_password':
+        commands = {'command': command_data["command"]}
+    else:
+        return jsonify({'error': 'Invalid command'}), 400
 
     # TODO: Leave easter egg for playing rickroll or something. It would be a new command like 'rickroll'
 
@@ -245,7 +292,7 @@ def admin_login():
         return render_template('admin_login.html')
     if request.method == 'POST':
         # Get the form data
-        ip_address = request.form.get('identifier')
+        ip_address = request.form.get('ip_address')
         # Confirm that the IP address is in the database and that it is active
         redis_key = f"device:{ip_address}"
         device_data = redis_client.get(redis_key)

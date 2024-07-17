@@ -15,8 +15,8 @@ void screen_init() {
 }
 
 
-void screen_loop(String app_identifier, String app_password, bool display_password) {
-  display_info(app_identifier, app_password, display_password);
+void screen_loop(String ip_address, String app_password, bool display_password) {
+  display_info(ip_address, app_password, display_password);
 }
 
 void display_text(String text) {
@@ -28,11 +28,11 @@ void display_text(String text) {
 
 }
 
-void display_info(String app_identifier, String app_password, bool display_password) {
+void display_info(String ip_address, String app_password, bool display_password) {
   display.clearDisplay(); // Clear the display
 
-  draw_text("Identifier", 0, 0); // Draw line for identifer
-  draw_text(app_identifier, 0, 16); // Draw identifier
+  draw_text("IP Address", 0, 0); // Draw line for identifer
+  draw_text(ip_address, 0, 16); // Draw ip address
   // Draw password if display_password is true
   if (display_password == true) {
     draw_text("Password", 0, 32); // Draw line for password
