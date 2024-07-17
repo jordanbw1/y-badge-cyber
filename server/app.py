@@ -24,6 +24,53 @@ redis_client = redis.Redis(connection_pool=redis_pool)
 def index():
     return render_template('index.html')
 
+@app.route('/get_commands', methods=['GET'])
+def get_commands():
+    """
+    Get the commands that the device can execute.
+    Returns:
+        JSON: JSON object containing the commands that the device can execute.
+    
+    """
+    commands = {
+        'commands': [
+            {
+                'command': 'change_led_color',
+                'description': 'Change the color of the LED on the device',
+                'parameters': [
+                    {
+                        'name': 'r',
+                        'type': 'int',
+                        'description': 'Red value of the LED color (0-255)'
+                    },
+                    {
+                        'name': 'g',
+                        'type': 'int',
+                        'description': 'Green value of the LED color (0-255)'
+                    },
+                    {
+                        'name': 'b',
+                        'type': 'int',
+                        'description': 'Blue value of the LED color (0-255)'
+                    }
+                ]
+            },
+            {
+                'command': 'change_password',
+                'description': 'Change the password of the device',
+                'parameters': [
+                    {
+                        'name': 'new_password',
+                        'type': 'str',
+                        'description': 'New password for the device'
+                    }
+                ]
+            }
+        ],
+        'description': 'These are the commands that the device can execute. Execute commands by sending a POST request to /control_device with the appropriate parameters.'
+    }
+    return jsonify(commands)
+
 @app.route('/control_device', methods=['GET', 'POST'])
 def control_device():
     if request.method == 'GET':

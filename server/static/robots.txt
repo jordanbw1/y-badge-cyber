@@ -5,6 +5,7 @@ Disallow: /admin_logout
 
 
 Allow: /
-Allow: /about
+Allow: /get_commands
 Allow: /control_device
+Allow: /about
 Allow: /list_view
