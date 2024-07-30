@@ -248,15 +248,18 @@ def poll_commands():
         commands = {'command': command_data["command"], 'r': command_data["params"]["r"], 'g': command_data["params"]["g"], 'b': command_data["params"]["b"]}
     elif command_data["command"] == 'change_password':
         commands = {'command': command_data["command"], 'new_password': command_data["params"]["new_password"]}
-    elif command_data["command"] == 'rickroll':
-        # TODO: Implement rickroll command
-        pass
+    # elif command_data["command"] == 'rickroll':
+    #     # TODO: Implement rickroll command
+    #     pass
     elif command_data["command"] == 'display_password':
         commands = {'command': command_data["command"]}
     elif command_data["command"] == 'hide_password':
         commands = {'command': command_data["command"]}
     else:
         return jsonify({'error': 'Invalid command'}), 400
+    
+    # Update last hacked time
+    update_last_seen(device_ip, redis_client, last_hacked=True)
 
     return jsonify(commands)
     

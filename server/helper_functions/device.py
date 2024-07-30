@@ -48,7 +48,7 @@ def remove_device_database(device_ip, redis_client):
     except Exception as e:
         return False, str(e)
 
-def update_last_seen(device_ip, redis_client):
+def update_last_seen(device_ip, redis_client, last_hacked=False):
     """
     Update the last seen time for a device in the database.
     Parameters:
@@ -64,6 +64,8 @@ def update_last_seen(device_ip, redis_client):
         if redis_client.exists(redis_key):
             device_data = json.loads(redis_client.get(redis_key))
             device_data['last_seen'] = time_now
+            if last_hacked:
+                device_data['last_hacked_time'] = time_now
             redis_client.set(redis_key, json.dumps(device_data))
             return True, "Good"
         else:
