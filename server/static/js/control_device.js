@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (xhr.status === 200) {
                 // Handle success, if needed
                 console.log("Command submitted successfully");
+                errorContainer.innerHTML = '<div class="alert alert-success alert-dismissible" role="alert">Command submitted successfully<button type="button" class="close" data-dismiss="alert">&times;</button></div>';
             } else {
                 // Handle error, if needed
                 console.log("Error occurred while submitting command");
