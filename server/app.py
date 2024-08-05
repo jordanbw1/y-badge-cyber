@@ -95,12 +95,13 @@ def get_commands():
                 'parameters': 'None'
             }
         ],
-        'example_usage': {
+        'example_parameters': {
             'control_type': 'change_led_color',
             'ip_address': '192.168.1.1',
             'password': 'password123',
             'color': '#FF0000'
-        }
+        },
+        'example_url_request': '/control_device?control_type=change_led_color&ip_address=192.168.1.1&password=password123&color=%233cec51#3cec51'
     }
     return jsonify(commands)
 
