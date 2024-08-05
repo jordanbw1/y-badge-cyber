@@ -34,16 +34,15 @@ def get_commands():
     Get the commands that the device can execute.
     Returns:
         JSON: JSON object containing the commands that the device can execute.
-    
     """
     commands = {
         'endpoint': '/control_device',
-        'method': 'POST',
+        'methods': ['GET', 'POST'],
         'parameters': [
             {
                 'name': 'control_type',
                 'type': 'str',
-                'description': 'Type of control command to execute'
+                'description': 'Type of control command to execute (e.g. change_led_color, change_password, display_password, hide_password, rickroll)'
             },
             {
                 'name': 'ip_address',
@@ -57,7 +56,7 @@ def get_commands():
             }
         ],
         'description': 'These are the commands that the device can execute. Execute commands by sending a POST request to /control_device with the appropriate parameters. The device IP address and password are required to authenticate the device. The control_type parameter specifies the type of command to execute. The parameters for each command are specified in the commands list.',
-        'commands': [
+        'control_types': [
             {
                 'command': 'change_led_color',
                 'description': 'Change the color of the LED on the device',
@@ -92,10 +91,16 @@ def get_commands():
             },
             {
                 'command': 'rickroll',
-                'description': 'Plays the Rick Astley - Never Gonna Give You Up video on the device',
+                'description': 'Plays the Rick Astley - Never Gonna Give You Up song on the device',
                 'parameters': 'None'
             }
-        ]
+        ],
+        'example_usage': {
+            'control_type': 'change_led_color',
+            'ip_address': '192.168.1.1',
+            'password': 'password123',
+            'color': '#FF0000'
+        }
     }
     return jsonify(commands)
 
