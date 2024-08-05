@@ -10,7 +10,7 @@ String ip_address = "";
 String app_password = "";
 // Following used for polling
 unsigned long previousMillis = 0;    // Store the last time the poll was done
-const long interval = 1000;          // Interval at which to poll (milliseconds)
+const long interval = 2000;          // Interval at which to poll (milliseconds)
 
 
 void cyber_init() {
@@ -89,7 +89,7 @@ void getCredentials() {
                 delay(5000); // Wait for 5 seconds before retrying
             }
         } else {
-            printf("Error: HTTP request failed with error code %d\n", httpResponseCode);
+            printf("Error getting credentials: HTTP request failed with error code %d\n", httpResponseCode);
             display_text("HTTP error: " + String(httpResponseCode));
             delay(5000); // Wait for 5 seconds before retrying
         }
@@ -119,66 +119,60 @@ void pollForCommands() {
             int r = doc["r"].as<int>();
             int g = doc["g"].as<int>();
             int b = doc["b"].as<int>();
-            http.end();
             printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
             // Implement your LED color change logic here
             all_leds_set_color(r, g, b);
-            // Confirm that the command was executed
-            confirmCommandExecuted(command);
         }
         else if (command == "change_password") {
             String new_password = doc["new_password"].as<String>();
-            http.end();
             printf("Changing password to %s\n", new_password.c_str());
             // Implement your password change logic here
             app_password = new_password;
-            // Confirm that the command was executed
-            confirmCommandExecuted(command);
         }
         else if (command == "display_password") {
-            http.end();
             display_password = true;
             Serial.println("Display password set to true.");
-            // Confirm that the command was executed
-            confirmCommandExecuted(command);
         }
         else if (command == "hide_password") {
-            http.end();
             display_password = false;
             Serial.println("Display password set to false.");
-            // Confirm that the command was executed
-            confirmCommandExecuted(command);
         }
         else if (command == "rickroll") {
-            http.end();
             // Implement your rickroll logic here
             printf("RickRolling...\n");
             // Play sound
             YAudio::stop_speaker();
             YAudio::play_sound_file(RICKROLL_FILENAME);
-            // Confirm that the command was executed
-            confirmCommandExecuted(command);
         }
         else {
-            http.end();
             printf("Unknown command: %s\n", command.c_str());
         }
     }
     else {
-        printf("Error: HTTP request failed with error code %d\n", httpResponseCode);
+        printf("Error polling: HTTP request failed with error code %d\n", httpResponseCode);
     }
-    // End http if it is still open
-    if (http.connected()) {
+    // End http connection
     http.end();
-    }
 }
 
 // Tell the server that the command was executed
 void confirmCommandExecuted(String command) {
     HTTPClient http;
-    String fullUrl = serverUrl + "/confirm_command";
+    String fullUrl = serverUrl + "confirm_command";
     fullUrl += "?command=" + command;
+    printf("Calling URL: %s\n", fullUrl.c_str());
     http.begin(fullUrl);
     int httpResponseCode = http.GET();
+    // If it fails get fail reason
+    // if (httpResponseCode != 200) {
+    //     String response = http.getString();
+    //     printf("Error confirming command execution: HTTP request failed with error code %d\n", httpResponseCode);
+    //     printf("Response: %s\n", http.errorToString(httpResponseCode));
+    // }
+    // End the connection
     http.end();
+    // If successful print confirmation
+    // if (httpResponseCode == 200) {
+    //     printf("Command execution confirmed\n");
+    // }
 }
