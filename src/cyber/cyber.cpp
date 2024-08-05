@@ -3,10 +3,15 @@
 const String ssid = "BYU-WiFi";
 const String serverUrl = "http://ecen192.byu.edu/";
 const int MAX_ATTEMPTS = 5;
+const std::string RICKROLL_FILENAME = "/rickroll.wav";
 
 boolean display_password = false;
 String ip_address = "";
 String app_password = "";
+// Following used for polling
+unsigned long previousMillis = 0;    // Store the last time the poll was done
+const long interval = 1000;          // Interval at which to poll (milliseconds)
+
 
 void cyber_init() {
     screen_init(); // Initialize the screen
@@ -19,9 +24,16 @@ void cyber_init() {
 }
 
 void cyber_loop() {
+    unsigned long currentMillis = millis();
+    // Wait for 1 second to poll for commands
+    if (currentMillis - previousMillis >= interval) {
+        // Save the last time the poll was done
+        previousMillis = currentMillis;
     pollForCommands(); // Poll for commands from the server
+    }
+    // Loop the rest as normal
     screen_loop(ip_address, app_password, display_password); // Display the IP address and password
-    delay(1000); // Delay for 1 second
+    Yboard.loop_speaker(); // Loop the speaker (for rickroll)
 }
 
 void cyber_wifi_init() {
@@ -92,7 +104,7 @@ void getCredentials() {
 
 void pollForCommands() {
     HTTPClient http;
-    http.begin(serverUrl + "/poll_commands");;
+    http.begin(serverUrl + "/poll_commands");
 
     int httpResponseCode = http.GET();
     if (httpResponseCode == 200) {
@@ -107,6 +119,7 @@ void pollForCommands() {
             int r = doc["r"].as<int>();
             int g = doc["g"].as<int>();
             int b = doc["b"].as<int>();
+            http.end();
             printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
             // Implement your LED color change logic here
             all_leds_set_color(r, g, b);
@@ -115,6 +128,7 @@ void pollForCommands() {
         }
         else if (command == "change_password") {
             String new_password = doc["new_password"].as<String>();
+            http.end();
             printf("Changing password to %s\n", new_password.c_str());
             // Implement your password change logic here
             app_password = new_password;
@@ -122,22 +136,41 @@ void pollForCommands() {
             confirmCommandExecuted(command);
         }
         else if (command == "display_password") {
+            http.end();
             display_password = true;
             Serial.println("Display password set to true.");
             // Confirm that the command was executed
             confirmCommandExecuted(command);
         }
         else if (command == "hide_password") {
+            http.end();
             display_password = false;
             Serial.println("Display password set to false.");
             // Confirm that the command was executed
             confirmCommandExecuted(command);
         }
+        else if (command == "rickroll") {
+            http.end();
+            // Implement your rickroll logic here
+            printf("RickRolling...\n");
+            // Play sound
+            YAudio::stop_speaker();
+            YAudio::play_sound_file(RICKROLL_FILENAME);
+            // Confirm that the command was executed
+            confirmCommandExecuted(command);
+        }
         else {
+            http.end();
             printf("Unknown command: %s\n", command.c_str());
         }
     }
+    else {
+        printf("Error: HTTP request failed with error code %d\n", httpResponseCode);
+    }
+    // End http if it is still open
+    if (http.connected()) {
     http.end();
+    }
 }
 
 // Tell the server that the command was executed

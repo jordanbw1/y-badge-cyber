@@ -6,6 +6,8 @@
 #include <ArduinoJson.h>
 #include "colors.h"
 #include "screen.h"
+#include "yaudio.h"
+#include "yboard.h"
 
 void cyber_init();
 void cyber_loop();

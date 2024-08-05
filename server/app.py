@@ -8,7 +8,7 @@ import redis
 import json
 from helper_functions.device import insert_device_database, remove_device_database, update_last_seen, ensure_device_active, check_last_seen, update_password
 from helper_functions.time_helper import get_current_utc_time, convert_string_time_to_datetime
-from werkzeug.middleware.proxy_fix import ProxyFix # NOTE: Comment out for local testing
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 DEVICE_TIMEOUT_SECONDS = 300 # Time in seconds before a device is considered offline
@@ -99,6 +99,11 @@ def get_commands():
                 'command': 'hide_password',
                 'description': 'Hide thepassword of the device from the screen',
                 'parameters': 'None'
+            },
+            {
+                'command': 'rickroll',
+                'description': 'Plays the Rick Astley - Never Gonna Give You Up video on the device',
+                'parameters': 'None'
             }
         ]
     }
@@ -178,6 +183,12 @@ def control_device():
                 'command': 'hide_password',
                 'params': {}
             }
+        elif control_type == 'rickroll':
+            # Save the command in Redis for the given device
+            command_data = {
+                'command': 'rickroll',
+                'params': {}
+            }
         else:
             return jsonify({'error': 'Invalid control type'}), 400
         
@@ -248,9 +259,8 @@ def poll_commands():
         commands = {'command': command_data["command"], 'r': command_data["params"]["r"], 'g': command_data["params"]["g"], 'b': command_data["params"]["b"]}
     elif command_data["command"] == 'change_password':
         commands = {'command': command_data["command"], 'new_password': command_data["params"]["new_password"]}
-    # elif command_data["command"] == 'rickroll':
-    #     # TODO: Implement rickroll command
-    #     pass
+    elif command_data["command"] == 'rickroll':
+        commands = {'command': command_data["command"]}
     elif command_data["command"] == 'display_password':
         commands = {'command': command_data["command"]}
     elif command_data["command"] == 'hide_password':

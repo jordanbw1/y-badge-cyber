@@ -10,6 +10,7 @@
 #include "wifi_test/wifi_test.h"
 #include "cyber/cyber.h"
 #include "yboard.h"
+#include "yaudio.h"
 
 
 void setup() {
