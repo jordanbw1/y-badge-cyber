@@ -63,20 +63,10 @@ def get_commands():
                 'description': 'Change the color of the LED on the device',
                 'parameters': [
                     {
-                        'name': 'r',
-                        'type': 'int',
-                        'description': 'Red value of the LED color (0-255)'
+                        'name': 'color',
+                        'type': 'str',
+                        'description': 'Hex color value (e.g. #FF0000 for red)'
                     },
-                    {
-                        'name': 'g',
-                        'type': 'int',
-                        'description': 'Green value of the LED color (0-255)'
-                    },
-                    {
-                        'name': 'b',
-                        'type': 'int',
-                        'description': 'Blue value of the LED color (0-255)'
-                    }
                 ]
             },
             {
@@ -111,90 +101,118 @@ def get_commands():
 
 @app.route('/control_device', methods=['GET', 'POST'])
 def control_device():
-    if request.method == 'GET':
+    # Normal GET request, just render the page
+    if request.method == 'GET' and not request.args:
         return render_template('control_device.html')
-    if request.method == 'POST':
+    # Get the form data from either GET
+    if request.method == 'GET' and request.args:
+        device_ip = request.args.get('ip_address')
+        password = request.args.get('password')
+        control_type = request.args.get('control_type')
+    # Get the form data from POST
+    elif request.method == 'POST':
         # Get the form data
         device_ip = request.form.get('ip_address')
         password = request.form.get('password')
         control_type = request.form.get('control_type')
+    # Invalid request method
+    else:
+        return jsonify({'error': 'Invalid request method'}), 400
+    # Return if any of the parameters are missing
+    if not device_ip or not password or not control_type:
+        return jsonify({'error': 'Missing parameters'}), 400
+    
+    print(f"Device IP: {device_ip}, Password: {password}, Control Type: {control_type}")
+    # Ensure password matches hash in database
+    redis_key = f"device:{device_ip}"
+    device_data = redis_client.get(redis_key)
+    if not device_data:
+        return jsonify({'error': 'Device not found'}), 400
+    
+    device_data = json.loads(device_data)
+    hashed_password = device_data.get('password')
+    if not hashed_password:
+        return jsonify({'error': 'Device not found'}), 400
+    
+    # Compare the password with the hash in the database
+    hashed_input_password = hashlib.md5(password.encode()).hexdigest()
+    if hashed_input_password != hashed_password:
+        return jsonify({'error': 'Invalid password'}), 400
 
-        # Ensure password matches hash in database
-        redis_key = f"device:{device_ip}"
-        device_data = redis_client.get(redis_key)
-        if not device_data:
-            return jsonify({'error': 'Device not found'}), 400
-        
-        device_data = json.loads(device_data)
-        hashed_password = device_data.get('password')
-        if not hashed_password:
-            return jsonify({'error': 'Device not found'}), 400
-        
-        # Compare the password with the hash in the database
-        hashed_input_password = hashlib.md5(password.encode()).hexdigest()
-        if hashed_input_password != hashed_password:
-            return jsonify({'error': 'Invalid password'}), 400
+    # Ensure ip address is in IP format with regex
+    ip_regex = re.compile(r'^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$')
+    if not ip_regex.match(device_ip):
+        print("Invalid IP address format")
+        return jsonify({'error': 'Invalid IP address format'}), 400  
 
-        # Check control type and execute the command
-        if control_type == 'change_led_color':
+    # Check control type and execute the command
+    if control_type == 'change_led_color':
+        # Get the color parameter
+        if request.method == 'GET':
+            color_hex = request.args.get('color')
+        elif request.method == 'POST':
             color_hex = request.form.get('color')
-            # Ensure ip address is in IP format with regex
-            ip_regex = re.compile(r'^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$')
-            if not ip_regex.match(device_ip):
-                print("Invalid IP address format")
-                return jsonify({'error': 'Invalid IP address format'}), 400        
-
-            # Convert the color value to R, G, B format
-            r = int(color_hex[1:3], 16)
-            g = int(color_hex[3:5], 16)
-            b = int(color_hex[5:7], 16)
-
-            # Ensure RGB values are within the range of 0 to 255
-            r = max(0, min(r, 255))
-            g = max(0, min(g, 255))
-            b = max(0, min(b, 255))
-
-            # Save the command in Redis for the given device
-            command_data = {
-                'command': 'change_led_color',
-                'params': {'r': r, 'g': g, 'b': b}
-            }
-        elif control_type == 'change_password':
-            new_password = request.form.get('new_password')
-            # Hash the new password
-            status, message, hashed_new_password = update_password(device_ip, new_password, redis_client)
-            if not status:
-                return jsonify({'error': message}), 400
-            
-            # Save the command in Redis for the given device
-            command_data = {
-                'command': 'change_password',
-                'params': {'new_password': new_password}
-            }
-        elif control_type == 'display_password':
-            # Save the command in Redis for the given device
-            command_data = {
-                'command': 'display_password',
-                'params': {}
-            }
-        elif control_type == 'hide_password':
-            # Save the command in Redis for the given device
-            command_data = {
-                'command': 'hide_password',
-                'params': {}
-            }
-        elif control_type == 'rickroll':
-            # Save the command in Redis for the given device
-            command_data = {
-                'command': 'rickroll',
-                'params': {}
-            }
-        else:
-            return jsonify({'error': 'Invalid control type'}), 400
+        if not color_hex:
+            return jsonify({'error': 'Missing color parameter'}), 400
         
-        redis_client.set(f"device_command:{device_ip}", json.dumps(command_data))
+        # Convert the color value to R, G, B format
+        r = int(color_hex[1:3], 16)
+        g = int(color_hex[3:5], 16)
+        b = int(color_hex[5:7], 16)
 
-        return jsonify({'status': 'success'}), 200
+        # Ensure RGB values are within the range of 0 to 255
+        r = max(0, min(r, 255))
+        g = max(0, min(g, 255))
+        b = max(0, min(b, 255))
+
+        # Save the command in Redis for the given device
+        command_data = {
+            'command': 'change_led_color',
+            'params': {'r': r, 'g': g, 'b': b}
+        }
+    elif control_type == 'change_password':
+        # Get the new password parameter
+        if request.method == 'GET':
+            new_password = request.args.get('new_password')
+        elif request.method == 'POST':
+            new_password = request.form.get('new_password')
+        if not new_password:
+            return jsonify({'error': 'Missing new password parameter'}), 400
+        
+        # Hash the new password
+        status, message, hashed_new_password = update_password(device_ip, new_password, redis_client)
+        if not status:
+            return jsonify({'error': message}), 400
+        
+        # Save the command in Redis for the given device
+        command_data = {
+            'command': 'change_password',
+            'params': {'new_password': new_password}
+        }
+    elif control_type == 'display_password':
+        # Save the command in Redis for the given device
+        command_data = {
+            'command': 'display_password',
+            'params': {}
+        }
+    elif control_type == 'hide_password':
+        # Save the command in Redis for the given device
+        command_data = {
+            'command': 'hide_password',
+            'params': {}
+        }
+    elif control_type == 'rickroll':
+        # Save the command in Redis for the given device
+        command_data = {
+            'command': 'rickroll',
+            'params': {}
+        }
+    else:
+        return jsonify({'error': 'Invalid control type'}), 400
+    
+    redis_client.set(f"device_command:{device_ip}", json.dumps(command_data))
+
+    return jsonify({'status': 'success'}), 200
 
 @app.route('/get_credentials', methods=['GET'])
 def get_credentials():
