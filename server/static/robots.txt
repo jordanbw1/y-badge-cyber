@@ -1,7 +1,5 @@
 User-agent: *
 Disallow: /admin
-Disallow: /admin_login
-Disallow: /admin_logout
 Disallow: /control_device
 Disallow: /get_commands
 
